@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mini-Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+      font-size: 2.5em;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .chat-box {
+      max-width: 800px;
+      margin: 0 auto 30px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+      max-height: 60vh;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+
+    .message {
+      display: flex;
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .message:last-child {
+      border-bottom: none;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      margin-right: 15px;
+      object-fit: cover;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .content {
+      flex: 1;
+    }
+
+    .pseudo {
+      font-weight: 600;
+      font-size: 1.1em;
+      margin-right: 10px;
+    }
+
+    .time {
+      color: #888;
+      font-size: 0.85em;
+      margin-right: 10px;
+    }
+
+    .texte {
+      margin-top: 8px;
+      line-height: 1.5;
+      color: #555;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+      font-style: italic;
+      font-size: 1.1em;
+    }
+
+    .chat-form {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.95);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: end;
+    }
+
+    .chat-form input {
+      padding: 12px 16px;
+      border: 2px solid #e1e5e9;
+      border-radius: 12px;
+      font-size: 1em;
+      transition: all 0.3s ease;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .chat-form input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .chat-form input[type="color"] {
+      width: 50px;
+      height: 50px;
+      padding: 4px;
+      cursor: pointer;
+    }
+
+    .chat-form button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 12px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .chat-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .chat-form button:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      .chat-form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .chat-form input, .chat-form button {
+        min-width: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Mini-Chat</h1>
+
+  <div class="chat-box" id="chatBox">
+    <p class="empty">Aucun message pour le moment…</p>
+  </div>
+
+  <form class="chat-form" id="chatForm">
+    <input type="text" name="pseudo" id="pseudo" placeholder="Pseudo" required value="Utilisateur">
+    <input type="url" name="avatar" id="avatar" placeholder="URL de votre avatar (facultatif)" value="https://i.pravatar.cc/45">
+    <input type="color" name="color" id="color" value="#667eea">
+    <input type="text" name="message" id="message" placeholder="Votre message..." required>
+    <button type="submit">Envoyer</button>
+  </form>
+
+  <script>
+    // Charger les messages depuis localStorage
+    function loadMessages() {
+      const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+      const chatBox = document.getElementById('chatBox');
+      
+      if (messages.length === 0) {
+        chatBox.innerHTML = '<p class="empty">Aucun message pour le moment…</p>';
+        return;
+      }
+      
+      chatBox.innerHTML = '';
+      // Afficher les messages du plus récent au plus ancien
+      messages.slice().reverse().forEach(msg => {
+        displayMessage(msg);
+      });
+    }
+
+    // Afficher un message
+    function displayMessage(msg) {
+      const chatBox = document.getElementById('chatBox');
+      const div = document.createElement('div');
+      div.className = 'message';
+      
+      const avatarSrc = msg.avatar || 'https://i.pravatar.cc/45';
+      const time = new Date(msg.time).toLocaleTimeString('fr-FR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      
+      div.innerHTML = `
+        <img src="${avatarSrc}" class="avatar" alt="avatar" onerror="this.src='https://i.pravatar.cc/45'">
+        <div class="content">
+          <span class="pseudo" style="color: ${msg.color}">${msg.pseudo}</span>
+          <span class="time">[${time}]</span>
+          <p class="texte">${msg.message}</p>
+        </div>
+      `;
+      
+      chatBox.insertBefore(div, chatBox.firstChild);
+    }
+
+    // Gérer l'envoi de message
+    document.getElementById('chatForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const pseudo = document.getElementById('pseudo').value.trim();
+      const avatar = document.getElementById('avatar').value.trim();
+      const color = document.getElementById('color').value;
+      const message = document.getElementById('message').value.trim();
+      
+      if (!pseudo || !message) return;
+      
+      // Créer le message
+      const newMessage = {
+        pseudo,
+        avatar,
+        color,
+        message,
+        time: Date.now()
+      };
+      
+      // Ajouter au localStorage
+      const messages = JSON.parse(localStorage.getItem('chatMessages')) || [];
+      messages.push(newMessage);
+      localStorage.setItem('chatMessages', JSON.stringify(messages));
+      
+      // Afficher le message et vider le champ
+      displayMessage(newMessage);
+      document.getElementById('message').value = '';
+      
+      // Masquer le message "vide" si présent
+      const emptyMsg = document.querySelector('.empty');
+      if (emptyMsg) emptyMsg.remove();
+      
+      // Scroll vers le haut
+      document.getElementById('chatBox').scrollTop = 0;
+    });
+
+    // Charger les messages au démarrage
+    loadMessages();
+
+    // Auto-scroll vers les messages récents (haut)
+    const chatBox = document.getElementById('chatBox');
+    chatBox.addEventListener('scroll', function() {
+      // Optionnel : auto-scroll vers le haut si proche
+    });
+  </script>
+</body>
+</html>
